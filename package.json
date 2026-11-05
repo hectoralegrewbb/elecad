@@ -1,0 +1,11 @@
+{
+  "name": "elcad",
+  "version": "0.6.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node serve.mjs",
+    "test": "node tests/modelSmoke.test.mjs && node tests/documentService.test.mjs && node tests/libraryFilter.test.mjs && node tests/compatibility.test.mjs && node tests/editorCorrections.test.mjs",
+    "build": "node scripts/build.mjs"
+  }
+}
