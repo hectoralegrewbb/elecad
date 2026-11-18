@@ -17,7 +17,7 @@ Los módulos ES no cargan desde `file://`: hace falta el servidor estático incl
 | Capa | Carpeta | Responsabilidad | Conoce el DOM |
 |---|---|---|---|
 | Dominio | `src/core` | documento inmutable, comandos, historial, geometría, ruteo A*, netlist, cotas, reportes, portapapeles, numeración | No |
-| Datos | `src/data` | catálogo (188 definiciones), símbolos, dispositivos configurables, documento de ejemplo | No |
+| Datos | `src/data` | catálogo (231 definiciones), símbolos, dispositivos configurables, documento de ejemplo | No |
 | Render | `src/render` | cámara, escena, temas, overlays, dibujo de componentes/cables sobre Canvas 2D | Solo el canvas |
 | Interacción | `src/interaction` | selección, herramientas (seleccionar, cablear, colocar), hit-testing, eventos de puntero | Canvas |
 | E/S | `src/io` | formato `.elcad`, IndexedDB, acceso a archivos, SVG/PNG/impresión | Sí (APIs del navegador) |
@@ -67,6 +67,8 @@ Definición estática (en `src/data/catalog*.js`):
 
 Definición **paramétrica**: agrega `parameters: [{ key, label, type: 'number'|'select'|'text', min, max, options, default }]` y `build(params) → { width, height, terminals, shapes }`. Los valores viven en `component.props`; `catalog.resolve(component)` devuelve la definición efectiva (se reconstruyen los bornes al cambiar un parámetro; los cables a bornes que desaparecen quedan huérfanos).
 
+Archivos del catálogo nuevos: `catalogDrives.js` (variadores; listas de bornes de control por familia), `catalogHarmonics.js` (APF), `catalogMagnetics.js` (bobinas, reactores, toroides, TI) y `catalogSmallEnclosures.js` (cajas chicas). Una definición puede traer `symbolKind` (p. ej. `'drive'`, `'apf'`) para elegir su símbolo sin depender del patrón del id.
+
 ### Agregar un componente
 1. Elegí el archivo por categoría (`catalogProtection.js`, `catalogControl.js`, …) o creá uno y registralo en `defaultCatalog.js`.
 2. Usá los helpers de `catalogHelpers.js`: `rowDevice({ top, bottom, pitch, symbol, … })`, `terminalRow`, `centeredText`, `contactorCoil`, `verticalArrow`.
@@ -80,9 +82,9 @@ Definición **paramétrica**: agrega `parameters: [{ key, label, type: 'number'|
 ## 5. Cableado
 
 - Herramienta `wire` (`W`): clic en un borne, waypoints opcionales, clic en el borne destino.
-- `RouteService` + `WireRouter`: **A\*** ortogonal sobre grilla virtual, estado = (celda, dirección) para penalizar giros (`bendPenalty` 6, `nearPenalty` 4, `overlapPenalty` 200, `nodeLimit` 250 000). Los componentes con `blocksRouting` son obstáculos.
+- `RouteService` + `WireRouter`: **A\*** ortogonal sobre grilla virtual, estado = (celda, dirección) para penalizar giros (`bendPenalty` 6, `crossPenalty` 20 por cruce perpendicular, `nearPenalty` 8 con `nearRadius` 2 celdas de separación entre paralelos, `overlapPenalty` 200, `nodeLimit` 250 000). Los componentes con `blocksRouting` son obstáculos.
 - Un cable con `waypoints` es **manual**; sin ellos es automático y se recalcula al mover componentes.
-- `HopCalculator` dibuja puentes en los cruces; `WireLabelPlacer` ubica rótulos.
+- `HopCalculator` dibuja puentes en los cruces; `toPathOps(..., cornerRadius)` redondea los codos (op `Q`, también en SVG); donde varios cables comparten un extremo se dibuja un punto de unión; el cable bajo el puntero (`overlay.hoverWireId`) resalta su nodo; `WireLabelPlacer` ubica rótulos.
 - Color/función: `wireStandards.js` (`phaseColors`: L1 marrón, L2 negro, L3 rojo, N celeste, PE verde-amarillo, 24V azul…; `phaseGauges`; diámetros). Un solo lugar para cambiar la convención.
 - `numbering.js`: «Numerar cables por nodo» (mismo número para todos los cables de un nodo; deshacible).
 

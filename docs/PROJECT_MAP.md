@@ -7,7 +7,7 @@
 - `src/ui/commandPalette.js`: búsqueda universal de componentes y comandos.
 - `src/ui/propertiesPanel.js`: documento, componente, cable, cota, multi-selección.
 - `src/render/*`: cámara, escena, temas (`theme.js`), dibujo.
-- `src/data/*`: catálogo de 188 componentes, símbolos, ejemplo.
+- `src/data/*`: catálogo de 231 componentes, símbolos, ejemplo.
 - `src/io/*`: formato `.elcad`, autoguardado, SVG/PNG/impresión.
 - `src/app/main.js`: composición. `documentService.js`: abrir/nuevo/ejemplo reversibles.
 - `tests/modelSmoke.test.mjs`, `documentService.test.mjs`, `libraryFilter.test.mjs`; `tests/responsive.html` (manual).

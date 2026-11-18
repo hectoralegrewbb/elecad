@@ -6,6 +6,7 @@ export function tracePathOps(ctx, ops) {
   ops.forEach((op) => {
     if (op.op === 'M') ctx.moveTo(op.x, op.y);
     else if (op.op === 'L') ctx.lineTo(op.x, op.y);
+    else if (op.op === 'Q') ctx.quadraticCurveTo(op.cx, op.cy, op.x, op.y);
     else if (op.dir > 0) ctx.arc(op.cx, op.cy, op.r, Math.PI, Math.PI * 2, false);
     else ctx.arc(op.cx, op.cy, op.r, 0, -Math.PI, true);
   });
@@ -45,7 +46,7 @@ function drawSegmentHandles(ctx, points, { theme, pixel }) {
 
 // items: [{ wire, points }]. Los cables huérfanos (endpoint libre) se dibujan punteados en color de advertencia.
 // highlighted: Set de ids de cables del mismo nodo que el seleccionado (el resto se atenúa); null = sin resaltado.
-export function drawWires(ctx, items, { theme, scale, selection, hops, hopRadius, highlighted = null, labels = new Map(), handles = false }) {
+export function drawWires(ctx, items, { theme, scale, selection, hops, hopRadius, cornerRadius = 0, highlighted = null, labels = new Map(), handles = false }) {
   const pixel = 1 / scale;
   ctx.save();
   ctx.lineJoin = 'round';
@@ -56,7 +57,7 @@ export function drawWires(ctx, items, { theme, scale, selection, hops, hopRadius
     const selected = selection.has(wire.id);
     const dimmed = highlighted !== null && !highlighted.has(wire.id);
     const color = orphan ? theme.warning : (theme.wireColors[wire.color] ?? theme.wireColors.negro);
-    const ops = toPathOps(points, hops.get(wire.id), hopRadius);
+    const ops = toPathOps(points, hops.get(wire.id), hopRadius, cornerRadius);
     ctx.globalAlpha = dimmed ? 0.22 : 1;
 
     if (selected || (highlighted !== null && !dimmed)) {
@@ -100,5 +101,30 @@ export function drawWires(ctx, items, { theme, scale, selection, hops, hopRadius
     if (handles && selected) drawSegmentHandles(ctx, points, { theme, pixel });
     ctx.globalAlpha = 1;
   });
+  drawJunctions(ctx, items, { theme, pixel, highlighted });
   ctx.restore();
+}
+
+// Punto de unión donde dos o más cables comparten un mismo extremo: deja claro que es una derivación y no un cruce.
+function drawJunctions(ctx, items, { theme, pixel, highlighted }) {
+  const counts = new Map();
+  items.forEach(({ wire, points }) => {
+    if (points.length < 2 || hasFreeEndpoint(wire)) return;
+    [points[0], points[points.length - 1]].forEach((point) => {
+      const key = `${Math.round(point.x * 10)},${Math.round(point.y * 10)}`;
+      const entry = counts.get(key) ?? { point, count: 0, active: false };
+      entry.count += 1;
+      entry.active = entry.active || highlighted === null || highlighted.has(wire.id);
+      counts.set(key, entry);
+    });
+  });
+  ctx.fillStyle = theme.junction ?? theme.text;
+  counts.forEach(({ point, count, active }) => {
+    if (count < 2) return;
+    ctx.globalAlpha = active ? 1 : 0.22;
+    ctx.beginPath();
+    ctx.arc(point.x, point.y, Math.max(1.6, pixel * 2.6), 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
 }

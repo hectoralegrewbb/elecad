@@ -37,6 +37,24 @@ export function drawShape(ctx, shape, theme, pixel) {
   ctx.restore();
 }
 
+// Rectángulo de esquinas suaves (radio en mm, acotado para no deformar piezas chicas).
+export function roundedRectPath(ctx, x, y, width, height, radius) {
+  const r = Math.max(0, Math.min(radius, width / 2, height / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+const bodyRadius = (definition) => Math.min(definition.blocksRouting ? 3 : 6, definition.width / 8, definition.height / 8);
+
 export function drawComponent(ctx, component, definition, { theme, scale, symbols = false }) {
   const pixel = 1 / scale;
   ctx.save();
@@ -45,13 +63,16 @@ export function drawComponent(ctx, component, definition, { theme, scale, symbol
   ctx.translate(-definition.width / 2, -definition.height / 2);
 
   ctx.fillStyle = definition.blocksRouting ? theme.componentFill : theme.containerFill;
-  ctx.fillRect(0, 0, definition.width, definition.height);
+  const radius = bodyRadius(definition);
+  roundedRectPath(ctx, 0, 0, definition.width, definition.height, radius);
+  ctx.fill();
   const symbolShapes = symbols && definition.blocksRouting ? symbolShapesFor(definition) : null;
   ctx.lineWidth = pixel * 1.4;
   ctx.strokeStyle = symbolShapes ? theme.mutedText : theme.componentStroke;
   // En la vista símbolo el contorno físico queda tenue y punteado: el protagonista es el símbolo eléctrico.
   ctx.setLineDash(symbolShapes ? [pixel * 4, pixel * 4] : []);
-  ctx.strokeRect(0, 0, definition.width, definition.height);
+  roundedRectPath(ctx, 0, 0, definition.width, definition.height, radius);
+  ctx.stroke();
   ctx.setLineDash([]);
 
   // Un borde interior sutil da cuerpo a la vista física; no modifica dimensiones ni bornes.
@@ -60,7 +81,8 @@ export function drawComponent(ctx, component, definition, { theme, scale, symbol
     ctx.strokeStyle = theme.mutedText;
     ctx.globalAlpha *= 0.24;
     ctx.lineWidth = pixel;
-    ctx.strokeRect(3, 3, definition.width - 6, definition.height - 6);
+    roundedRectPath(ctx, 3, 3, definition.width - 6, definition.height - 6, Math.max(0, radius - 1));
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -107,10 +129,20 @@ export function drawComponent(ctx, component, definition, { theme, scale, symbol
 }
 
 export function drawSelectionOutline(ctx, bounds, theme, scale) {
+  const x = bounds.left - 3;
+  const y = bounds.top - 3;
+  const width = bounds.right - bounds.left + 6;
+  const height = bounds.bottom - bounds.top + 6;
   ctx.save();
+  ctx.setLineDash([]);
+  // Relleno tenue + trazo suave: se nota la selección sin tapar el dibujo.
+  roundedRectPath(ctx, x, y, width, height, 5);
+  ctx.globalAlpha = 0.07;
+  ctx.fillStyle = theme.selection;
+  ctx.fill();
+  ctx.globalAlpha = 1;
   ctx.strokeStyle = theme.selection;
   ctx.lineWidth = 1.5 / scale;
-  ctx.setLineDash([]);
-  ctx.strokeRect(bounds.left - 3, bounds.top - 3, bounds.right - bounds.left + 6, bounds.bottom - bounds.top + 6);
+  ctx.stroke();
   ctx.restore();
 }

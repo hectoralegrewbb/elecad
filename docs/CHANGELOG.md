@@ -1,4 +1,15 @@
 # Bitácora
+## 0.7.0 — 2026-11-18
+Catálogo ampliado, cableado más legible e interfaz más suave.
+
+- **Variadores**: nuevos archivos `catalogDrives.js` (todos los variadores, ids existentes intactos) con Schneider Altivar ATV12/212/320 mono/340/610/930, Siemens G120X FSB/FSC, ABB ACS355/580 R3/880, Danfoss FC 302/280/102, WEG CFW300/CFW11, Yaskawa V1000/GA500, Delta VFD-EL/MS300, Mitsubishi FR-D720S/FR-E820 y Allen-Bradley PowerFlex 525. La altura se ajusta sola a la cantidad de bornes de control. Bornes simplificados: verificar con el manual.
+- **Filtros activos de armónicos (APF)**: `catalogHarmonics.js` con Schneider EasyLogic APF 50/100/150 A (medidas de la hoja de datos) y un APF genérico con ancho/alto configurables para otras marcas. Símbolo propio.
+- **Bobinas y toroides** (`catalogMagnetics.js`): bobina/reactor monofásico, reactor trifásico, bobina toroidal, choke toroidal de modo común y TI toroidal, para armar filtros LC y la medición de los APF.
+- **Cajas chicas** (`catalogSmallEnclosures.js`): cajas de paso 100×100 a 200×200, gabinetes chicos hasta 300×400, gabinete a medida y botonera de 1 a 6 agujeros Ø22,5.
+- **Cableado**: el router A* penaliza cruces (`crossPenalty`) y separa carriles paralelos 2 celdas (`nearRadius`). En una escena de 50 cables: cables pegados 2330 → 145 mm, cruces 58 → 46. Esquinas redondeadas (también en SVG), puntos de unión donde varios cables comparten un extremo y resaltado temporal del nodo bajo el puntero (el resto se atenúa).
+- **UI/UX 0.7**: esquinas redondeadas en equipos y selección, halo en bornes, paneles flotantes translúcidos, botones y campos con transiciones cortas, scrollbars finas, paneles laterales que se deslizan.
+- Prueba nueva `catalogAdditions.test.mjs`; la prueba de puentes ahora fuerza un cruce porque el router evita los innecesarios.
+
 ## 0.4.0 — 2026-10-29
 Rediseño visual y de interacción alineado con ElCad 3D.
 

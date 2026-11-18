@@ -214,6 +214,20 @@ const symbols = {
     const bottom = onSide(definition, 'bottom');
     return top.flatMap((terminal, index) => [line(terminal.x, 0, bottom[index]?.x ?? terminal.x, definition.height), circle(terminal.x, definition.height / 2, 2.5)]);
   },
+  apf(definition) {
+    const w = definition.width;
+    const h = definition.height;
+    const boxW = Math.min(w - 20, 56);
+    const x = w / 2 - boxW / 2;
+    const y = h / 2 - boxW / 2;
+    // Senal distorsionada (zigzag) arriba y senoide corregida abajo, dentro del recuadro.
+    const wave = Array.from({ length: 8 }, (_, index) => {
+      const x1 = x + 6 + index * ((boxW - 12) / 8);
+      const x2 = x + 6 + (index + 1) * ((boxW - 12) / 8);
+      return line(x1, y + boxW * 0.72 + Math.sin(index * 0.8) * 7, x2, y + boxW * 0.72 + Math.sin((index + 1) * 0.8) * 7);
+    });
+    return [rect(x, y, boxW, boxW), text(x + boxW / 2, y + boxW * 0.28, 'APF', 9), ...wave];
+  },
   spd(definition) {
     const top = onSide(definition, 'top');
     const cx = definition.width / 2;
@@ -248,6 +262,7 @@ const rules = [
   [/^bus\./, 'busbar'],
   [/^generic\.terminalstrip|^phoenix\./, 'terminalStrip'],
   [/^generic\.spd/, 'spd'],
+  [/\.apf(\.|$)/, 'apf'],
 ];
 
 const cache = new WeakMap();
@@ -255,11 +270,12 @@ const cache = new WeakMap();
 // Shapes del símbolo del componente o null si no tiene (la vista usa entonces su dibujo normal).
 export function symbolShapesFor(definition) {
   if (cache.has(definition)) return cache.get(definition);
-  const rule = rules.find(([pattern]) => pattern.test(definition.id));
+  // symbolKind declarado en la definicion tiene prioridad sobre los patrones de id.
+  const kind = definition.symbolKind ?? rules.find(([pattern]) => pattern.test(definition.id))?.[1];
   let shapes = null;
-  if (rule?.[1] && symbols[rule[1]]) {
+  if (kind && symbols[kind]) {
     try {
-      shapes = symbols[rule[1]](definition);
+      shapes = symbols[kind](definition);
     } catch {
       shapes = null;
     }

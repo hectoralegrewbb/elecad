@@ -84,9 +84,30 @@ export class HopCalculator {
 
 // Convierte una polilínea (+ puentes) en operaciones de trazo neutrales al backend (canvas / SVG).
 // ops: { op:'M'|'L', x, y } | { op:'H', cx, cy, r, dir }   (H = arco de salto, dir = sentido en x)
-export function toPathOps(points, hopsBySegment, radius) {
+//      | { op:'Q', cx, cy, x, y }                          (Q = esquina redondeada: curva cuadrática con control en el vértice)
+// cornerRadius > 0 redondea los codos; un codo se deja a 90° si alguno de sus tramos es más corto que 2 radios
+// o si un puente cae pegado al vértice.
+export function toPathOps(points, hopsBySegment, radius, cornerRadius = 0) {
   if (points.length === 0) return [];
   const ops = [{ op: 'M', x: points[0].x, y: points[0].y }];
+  const length = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+  const unit = (a, b) => ({ x: Math.sign(b.x - a.x), y: Math.sign(b.y - a.y) });
+  const hopNearEnd = (index, vertex) => {
+    const a = points[index];
+    const b = points[index + 1];
+    return (hopsBySegment?.get(index) ?? []).some((crossingX) => Math.abs(crossingX - vertex.x) < radius * 2 + cornerRadius) && isHorizontal(a, b);
+  };
+  const roundable = (index) => {
+    // index = vértice interior (1..n-2) entre los tramos index-1 e index
+    if (cornerRadius <= 0 || index <= 0 || index >= points.length - 1) return false;
+    const before = points[index - 1];
+    const vertex = points[index];
+    const after = points[index + 1];
+    const turns = (isHorizontal(before, vertex) && isVertical(vertex, after)) || (isVertical(before, vertex) && isHorizontal(vertex, after));
+    if (!turns) return false;
+    if (length(before, vertex) < cornerRadius * 2 || length(vertex, after) < cornerRadius * 2) return false;
+    return !hopNearEnd(index - 1, vertex) && !hopNearEnd(index, vertex);
+  };
   for (let i = 0; i < points.length - 1; i += 1) {
     const a = points[i];
     const b = points[i + 1];
@@ -98,7 +119,14 @@ export function toPathOps(points, hopsBySegment, radius) {
         ops.push({ op: 'H', cx: crossingX, cy: a.y, r: radius, dir: direction });
       });
     }
-    ops.push({ op: 'L', x: b.x, y: b.y });
+    if (roundable(i + 1)) {
+      const incoming = unit(a, b);
+      const outgoing = unit(b, points[i + 2]);
+      ops.push({ op: 'L', x: b.x - incoming.x * cornerRadius, y: b.y - incoming.y * cornerRadius });
+      ops.push({ op: 'Q', cx: b.x, cy: b.y, x: b.x + outgoing.x * cornerRadius, y: b.y + outgoing.y * cornerRadius });
+    } else {
+      ops.push({ op: 'L', x: b.x, y: b.y });
+    }
   }
   return ops;
 }

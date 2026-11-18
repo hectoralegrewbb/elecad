@@ -5,7 +5,7 @@ Editor para armar el **layout de gabinetes** y esquemas eléctricos de planta, c
 ## 1. La pantalla
 
 - **Barra superior**: nombre del documento (menú Archivo), deshacer/rehacer, herramientas **Seleccionar / Cablear**, vista **Forma / Símbolo**, **Comandos** (`Ctrl K`), **Guardar** y **Exportar**.
-- **Biblioteca** (izquierda): los 188 componentes. Buscá por nombre, marca o tipo, filtrá por categoría y hacé clic para colocar.
+- **Biblioteca** (izquierda): los 231 componentes (variadores de varias marcas, filtros activos APF, bobinas y toroides, cajas chicas y botoneras). Buscá por nombre, marca o tipo, filtrá por categoría y hacé clic para colocar.
 - **Lienzo** (centro): tu plano. Abajo a la derecha el zoom; abajo a la izquierda las acciones de la selección.
 - **Propiedades** (derecha): sin selección muestra el **documento**; con un elemento seleccionado, sus datos editables.
 - **Barra de estado**: herramienta, zoom, posición del cursor en mm, cantidad de componentes y cables, y el estado del autoguardado.

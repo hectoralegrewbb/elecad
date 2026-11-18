@@ -17,10 +17,13 @@ import {
 } from './drawOverlays.js';
 
 export const hopRadius = 3;
+export const cornerRadius = 3; // codos de cable redondeados (mm): más legible con muchos cables
 
 // Al seleccionar un cable, resalta todos los cables de su mismo nodo eléctrico y atenúa el resto.
-function highlightedNet(state, catalog, selection) {
+// Sin cable seleccionado, el cable bajo el puntero (hoverWireId) hace de foco temporal.
+function highlightedNet(state, catalog, selection, hoverWireId = null) {
   const selectedWires = selection.toArray().filter((id) => state.wires[id]);
+  if (selectedWires.length === 0 && hoverWireId && state.wires[hoverWireId]) selectedWires.push(hoverWireId);
   if (selectedWires.length === 0) return null;
   const { netIdByWire } = buildNetlist(state, catalog);
   const nets = new Set(selectedWires.map((id) => netIdByWire.get(id)).filter(Boolean));
@@ -63,9 +66,10 @@ export function drawScene(ctx, { width, height, viewport, pixelRatio = 1, scene,
     selection,
     hops,
     hopRadius,
+    cornerRadius,
     labels,
     handles: interactive,
-    highlighted: interactive ? highlightedNet(state, catalog, selection) : null,
+    highlighted: interactive ? highlightedNet(state, catalog, selection, overlay.hoverWireId) : null,
   });
 
   const titleBlock = getTitleBlockLayout(state, catalog, routeService);

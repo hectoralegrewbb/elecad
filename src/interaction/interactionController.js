@@ -18,6 +18,11 @@ export class InteractionController {
     canvas.addEventListener('pointermove', (event) => this.onPointerMove(event));
     canvas.addEventListener('pointerup', (event) => this.onPointerUp(event));
     canvas.addEventListener('pointercancel', (event) => this.onPointerUp(event));
+    canvas.addEventListener('pointerleave', () => {
+      if (this.editor.overlay.hoverWireId === null) return;
+      this.editor.overlay.hoverWireId = null;
+      this.editor.requestRender();
+    });
     canvas.addEventListener('wheel', (event) => this.onWheel(event), { passive: false });
     canvas.addEventListener('contextmenu', (event) => event.preventDefault());
     window.addEventListener('keydown', (event) => this.onKeyDown(event));

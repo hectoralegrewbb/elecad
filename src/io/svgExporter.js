@@ -5,7 +5,7 @@ import { resolveDimension } from '../core/dimensionGeometry.js';
 import { getSceneBounds, getTitleBlockLayout } from '../core/sceneBounds.js';
 import { computeWireLabels, getDisplay, labelFontSize, WireLabelPlacer } from '../core/wireLabel.js';
 import { toPathOps } from '../core/wireGeometry.js';
-import { hopRadius } from '../render/sceneDrawer.js';
+import { cornerRadius, hopRadius } from '../render/sceneDrawer.js';
 import { printTheme } from '../render/theme.js';
 import { symbolShapesFor } from '../data/symbolLibrary.js';
 
@@ -64,6 +64,7 @@ function opsToPathData(ops) {
   return ops
     .map((op) => {
       if (op.op === 'M' || op.op === 'L') return `${op.op}${round(op.x)} ${round(op.y)}`;
+      if (op.op === 'Q') return `Q${round(op.cx)} ${round(op.cy)} ${round(op.x)} ${round(op.y)}`;
       return `A${op.r} ${op.r} 0 0 ${op.dir > 0 ? 1 : 0} ${round(op.cx + op.dir * op.r)} ${round(op.cy)}`;
     })
     .join(' ');
@@ -84,7 +85,7 @@ export function exportSvg({ state, catalog, routeService, hopCalculator, labelPl
     .filter(({ points }) => points.length >= 2)
     .map(({ wire, points }) => {
       const color = theme.wireColors[wire.color] ?? theme.wireColors.negro;
-      const d = opsToPathData(toPathOps(points, hops.get(wire.id), hopRadius));
+      const d = opsToPathData(toPathOps(points, hops.get(wire.id), hopRadius, cornerRadius));
       const width = round(0.55 + 0.1 * Math.sqrt(Number(wire.gauge) || 1.5) * 1.6);
       return `<path d="${d}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linejoin="round" stroke-linecap="round"/>`;
     })

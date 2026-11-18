@@ -1,5 +1,5 @@
 import { getComponentBounds } from '../core/componentGeometry.js';
-import { drawShape } from './drawComponents.js';
+import { drawShape, roundedRectPath } from './drawComponents.js';
 
 export function drawGrid(ctx, { viewport, width, height, gridSize, theme }) {
   const topLeft = viewport.screenToWorld(0, 0);
@@ -84,10 +84,11 @@ export function drawGhost(ctx, ghost, { catalog, theme, scale }) {
   ctx.rotate((ghost.rotation * Math.PI) / 180);
   ctx.translate(-definition.width / 2, -definition.height / 2);
   ctx.fillStyle = theme.componentFill;
-  ctx.fillRect(0, 0, definition.width, definition.height);
+  roundedRectPath(ctx, 0, 0, definition.width, definition.height, Math.min(3, definition.width / 8, definition.height / 8));
+  ctx.fill();
   ctx.strokeStyle = theme.selection;
   ctx.lineWidth = 1.4 / scale;
-  ctx.strokeRect(0, 0, definition.width, definition.height);
+  ctx.stroke();
   definition.shapes.forEach((shape) => drawShape(ctx, shape, theme, 1 / scale));
   ctx.restore();
 }
@@ -107,10 +108,16 @@ export function drawWirePreview(ctx, preview, { theme, scale }) {
 export function drawTerminalHighlight(ctx, terminal, { theme, scale }) {
   if (!terminal) return;
   ctx.save();
+  ctx.beginPath();
+  ctx.arc(terminal.x, terminal.y, 9 / scale, 0, Math.PI * 2);
+  ctx.fillStyle = theme.terminalHover;
+  ctx.globalAlpha = 0.16;
+  ctx.fill();
+  ctx.globalAlpha = 1;
   ctx.strokeStyle = theme.terminalHover;
   ctx.lineWidth = 2 / scale;
   ctx.beginPath();
-  ctx.arc(terminal.x, terminal.y, 7 / scale, 0, Math.PI * 2);
+  ctx.arc(terminal.x, terminal.y, 6 / scale, 0, Math.PI * 2);
   ctx.stroke();
   ctx.restore();
 }

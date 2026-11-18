@@ -57,6 +57,7 @@ export const darkTheme = {
   mutedText: '#8c98ad',
   terminal: '#83b9dd',
   terminalHover: '#ffb020',
+  junction: '#e6ebf3',
   selection: '#4da3ff',
   guide: '#ff4fd8',
   warning: '#ffb020',
@@ -79,6 +80,7 @@ export const printTheme = {
   text: '#111111',
   mutedText: '#777777',
   terminal: '#0b7a75',
+  junction: '#111111',
   dimension: '#8a6d00',
   wireColors: printWireColors,
 };

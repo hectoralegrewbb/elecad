@@ -13,13 +13,15 @@ const sideToDirection = { top: 0, right: 1, bottom: 2, left: 3 };
 // A* ortogonal sobre una grilla virtual, con penalidad por curvas.
 // Estado de búsqueda = (celda, dirección) para poder penalizar cada giro.
 export class WireRouter {
-  constructor({ bendPenalty = 6, margin = 10, nodeLimit = 250000, clearanceRatio = 0.4 } = {}) {
+  constructor({ bendPenalty = 6, margin = 10, nodeLimit = 250000, clearanceRatio = 0.4, nearPenalty = 8, crossPenalty = 20, nearRadius = 2 } = {}) {
     this.bendPenalty = bendPenalty;
+    this.crossPenalty = crossPenalty; // costo de cruzar perpendicularmente otro cable (menos cruces = esquema más legible)
+    this.nearRadius = nearRadius; // celdas de separación deseada entre cables paralelos (2 = 10 mm con grilla de 5)
     this.margin = margin;
     this.nodeLimit = nodeLimit;
     this.clearanceRatio = clearanceRatio;
     this.overlapPenalty = 200;
-    this.nearPenalty = 4; // costo de correr pegado (a 1 celda) a otro cable: separa los carriles
+    this.nearPenalty = nearPenalty; // costo de correr pegado (a 1 celda) a otro cable: separa los carriles
   }
 
   blockCells(box, blocked, cells) {
@@ -30,7 +32,8 @@ export class WireRouter {
   }
 
   // Bits por celda: 1 = arista horizontal (hacia la derecha) usada, 2 = arista vertical (hacia abajo) usada,
-  // 4 / 8 = hay una arista horizontal / vertical usada en la celda vecina (carril pegado).
+  // 4 / 8 = hay una arista horizontal / vertical usada en una celda vecina (carril pegado, hasta nearRadius),
+  // 16 / 32 = un cable horizontal / vertical pasa por este nodo (sirve para penalizar cruces).
   buildEdgeGrid(box, segments, gridSize) {
     const used = new Uint8Array(box.width * box.height);
     const inside = (x, y) => x >= box.minX && y >= box.minY && x < box.minX + box.width && y < box.minY + box.height;
@@ -45,15 +48,21 @@ export class WireRouter {
       if (y1 === y2) {
         for (let x = Math.min(x1, x2); x < Math.max(x1, x2); x += 1) {
           mark(x, y1, 1);
-          mark(x, y1 - 1, 4);
-          mark(x, y1 + 1, 4);
+          for (let gap = 1; gap <= this.nearRadius; gap += 1) {
+            mark(x, y1 - gap, 4);
+            mark(x, y1 + gap, 4);
+          }
         }
+        for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x += 1) mark(x, y1, 16);
       } else if (x1 === x2) {
         for (let y = Math.min(y1, y2); y < Math.max(y1, y2); y += 1) {
           mark(x1, y, 2);
-          mark(x1 - 1, y, 8);
-          mark(x1 + 1, y, 8);
+          for (let gap = 1; gap <= this.nearRadius; gap += 1) {
+            mark(x1 - gap, y, 8);
+            mark(x1 + gap, y, 8);
+          }
         }
+        for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y += 1) mark(x1, y, 32);
       }
     });
     return used;
@@ -189,7 +198,8 @@ export class WireRouter {
         const overlap = this.edgePenalty(box, used, cellIdx, next, overlapPenalty);
         if (overlap === Infinity) continue;
         const nextState = nextIdx * 4 + next;
-        const nextCost = cost[state] + 1 + overlap + (next === direction ? 0 : this.bendPenalty);
+        const crossing = this.crossPenalty && used[nextIdx] & (next & 1 ? 32 : 16) ? this.crossPenalty : 0;
+        const nextCost = cost[state] + 1 + overlap + crossing + (next === direction ? 0 : this.bendPenalty);
         if (nextCost < cost[nextState]) {
           cost[nextState] = nextCost;
           cameFrom[nextState] = state;

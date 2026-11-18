@@ -6,6 +6,7 @@ export const createEmptyOverlay = () => ({
   ghost: null,
   wirePreview: null,
   hoverTerminal: null,
+  hoverWireId: null,
 });
 
 // Contexto compartido por herramientas, UI y servicios. No contiene lógica de dominio:

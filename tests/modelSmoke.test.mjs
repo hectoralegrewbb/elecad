@@ -65,13 +65,31 @@ paths.forEach((points, index) => {
 });
 assert.equal(routeService.getPath(wires[0], state), paths[0], 'la caché debe devolver la misma referencia');
 
-// 3) Puentes: el cable de bobina cruza los 3 cables contactor→variador
+// 3) Puentes: el router penaliza los cruces, así que el cable de bobina ya no tiene por qué cruzar a los 3 cables
+// contactor→variador; el HopCalculator se verifica con un cruce forzado entre dos trazados.
 const hopCalculator = new HopCalculator({ radius: 3 });
 const hops = hopCalculator.compute(wires.map((wire, index) => ({ id: wire.id, points: paths[index] })));
 const coilWire = wires[wires.length - 1];
 const hopCount = [...(hops.get(coilWire.id)?.values() ?? [])].reduce((sum, list) => sum + list.length, 0);
-assert.equal(hopCount, 3, `se esperaban 3 puentes en el cable de bobina, hay ${hopCount}`);
-assert.ok(toPathOps(paths[paths.length - 1], hops.get(coilWire.id), 3).some((op) => op.op === 'H'));
+assert.ok(hopCount <= 3, `el cable de bobina no debe cruzar más de 3 cables, cruza ${hopCount}`);
+{
+  const horizontal = [{ x: 0, y: 50 }, { x: 100, y: 50 }];
+  const vertical = [{ x: 50, y: 0 }, { x: 50, y: 100 }];
+  const forced = new HopCalculator({ radius: 3 }).compute([{ id: 'h', points: horizontal }, { id: 'v', points: vertical }]);
+  assert.equal([...(forced.get('h')?.values() ?? [])].flat().length, 1, 'el tramo horizontal salta sobre el vertical');
+  assert.ok(toPathOps(horizontal, forced.get('h'), 3).some((op) => op.op === 'H'));
+}
+
+// 3b) Esquinas redondeadas: cada codo largo pasa a ser una curva Q; los codos con tramos cortos quedan a 90°
+{
+  const elbow = [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 40 }];
+  const rounded = toPathOps(elbow, undefined, 3, 3);
+  assert.deepEqual(rounded.map((op) => op.op), ['M', 'L', 'Q', 'L']);
+  assert.deepEqual(rounded[2], { op: 'Q', cx: 40, cy: 0, x: 40, y: 3 });
+  assert.equal(toPathOps(elbow, undefined, 3).some((op) => op.op === 'Q'), false, 'sin radio no hay curvas');
+  const tight = toPathOps([{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 40 }], undefined, 3, 3);
+  assert.equal(tight.some((op) => op.op === 'Q'), false, 'un tramo de 4 mm no admite esquina de 3 mm');
+}
 
 // 4) Grafo eléctrico + huérfanos al borrar un componente
 const netlist = buildNetlist(state);

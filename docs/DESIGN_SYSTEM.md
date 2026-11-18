@@ -33,3 +33,6 @@ Acento azul sobre gris oscuro, componentes #2a302c con contornos #b8c4b5 y borne
 
 ### 0.6 industrial
 Fondo #1c222b, componentes #293340, borde #aebbc9, bornes #83b9dd. Radio 3px. Barra principal + barra RÓTULOS; botones con aria-pressed para distinguir estado. Altura total 78px escritorio / 122px compacto.
+
+### 0.7 suave
+Mismos colores; cambia la forma. Radio 8 px en controles y 12 px en paneles flotantes, que ahora son translúcidos con desenfoque. Transiciones de 140–220 ms con curva `cubic-bezier(.2,.7,.2,1)` (botones suben 1 px al pasar el mouse, campos con halo azul al enfocar, paneles laterales deslizan). En el lienzo: equipos con esquinas de 3 mm, selección con relleno tenue, bornes con halo, cables con codos redondeados y puntos de unión.

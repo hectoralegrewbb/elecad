@@ -33,6 +33,7 @@ export class SelectTool {
 
   deactivate() {
     this.editor.store.commitTransient();
+    this.editor.overlay.hoverWireId = null;
     this.reset();
   }
 
@@ -123,14 +124,24 @@ export class SelectTool {
     this.cursor = 'default';
     if (hitTestWireLabel(pointer.world, this.wireLabels(state), editor.pixelsToWorld(2)) !== null) {
       this.cursor = 'move';
+      this.setHoverWire(null);
       return;
     }
     const hit = hitTestWireSegment(pointer.world, state, editor.routeService, editor.pixelsToWorld(6));
+    this.setHoverWire(hit?.wireId ?? null);
     if (hit && editor.selection.has(hit.wireId)) {
       const points = editor.routeService.getPath(state.wires[hit.wireId], state);
       const orientation = segmentOrientation(points[hit.index], points[hit.index + 1]);
       if (orientation) this.cursor = orientation === 'horizontal' ? 'ns-resize' : 'ew-resize';
     }
+  }
+
+  // Cable bajo el puntero: foco temporal (resalta su nodo y atenúa el resto). Solo repinta si cambia.
+  setHoverWire(wireId) {
+    const { editor } = this;
+    if (editor.overlay.hoverWireId === wireId) return;
+    editor.overlay.hoverWireId = wireId;
+    editor.requestRender();
   }
 
   updateWireEdit(pointer) {
