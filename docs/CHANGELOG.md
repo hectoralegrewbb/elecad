@@ -63,3 +63,9 @@ Orientación de etiqueta, bornes y texto interior; límites de exportación incl
 Archivos: styles.css; src/app/appCommands.js, editorActions.js; src/core/align.js, commands.js, documentState.js, sceneBounds.js, nuevo textLayout.js; src/data/catalogSensors.js; src/interaction/hitTesting.js, selectTool.js; src/io/svgExporter.js; src/render/drawComponents.js, theme.js; src/ui/propertiesPanel.js, workbench.js; package.json; tests/editorCorrections.test.mjs y documentación.
 
 Pendientes: Emerson Unidrive y sensores específicos sin referencia. Se mantiene pendiente heredado de concurrencia de autoguardado entre pestañas/iframes; usar una sola instancia de edición. No se implementó bloqueo de persistencia como cambio incidental.
+
+## Plano unifilar
+
+- Editor de potencia con símbolos, puertos, barras, conexiones ortogonales, derivaciones y propiedades de circuito.
+- Láminas A4/A3 verticales y apaisadas con cajetín, SVG e impresión vectorial.
+- Guardado `.elcad` versionado y recuperación local por editor. Se conservan la apertura y las exportaciones de gabinetes.

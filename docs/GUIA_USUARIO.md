@@ -105,3 +105,13 @@ Biblioteca abre/cierra el catálogo. Propiedades abre la selección actual o el 
 Seleccioná una pieza y elegí Texto etiqueta → vertical para regletas densas. Texto bornes controla la lectura de identificadores y Texto interior la leyenda interna. Las preferencias se guardan en el plano.
 Para ocultar mm², apagá Sección mm² en RÓTULOS. Para quitar todo el texto de los cables, apagá también Número y Función. El calibre eléctrico no cambia.
 Para fijar el tablero: seleccioná gabinete y presioná Bloquear gabinete. Menú del nombre del documento → Desbloquear gabinetes lo libera sin seleccionarlo.
+
+## Plano unifilar
+
+1. Abrí el menú del documento y elegí **Plano unifilar**. En **Símbolos** podés buscar un equipo o cargar un tablero de ejemplo.
+2. Elegí un símbolo y tocá la lámina para colocarlo. Arrastralo para moverlo. Desde **Propiedades** podés editar su identificación, sus datos, la posición y el giro.
+3. Activá **Conectar** y elegí los dos puertos. Tocá puntos intermedios de la hoja para fijar quiebres. Para sacar un ramal de un circuito existente, seleccioná su tramo y usá **Insertar unión en el tramo**. Conectá el ramal al puerto de esa unión. Un cruce sin unión se muestra con una interrupción gráfica y conserva ambos circuitos independientes.
+4. Desde **Propiedades** editá los conductores, la sección y la identificación del circuito. Seleccioná la hoja para elegir A4/A3, orientación y **Editar cajetín**.
+5. **Guardar** genera el `.elcad` editable. **SVG** descarga la lámina vectorial y **Imprimir / PDF** abre el diálogo de impresión. Para conservar el tamaño de lámina, elegí el tamaño indicado en la barra y la escala de impresión del 100 %, con encabezados y pies del navegador desactivados.
+
+La plantilla incluida usa escala esquemática S/E. La simbología es genérica de potencia y la aplicación verifica la estructura del dibujo. La tabla de símbolos y la plantilla interna del destinatario se cotejan antes de emitir un plano con una declaración normativa específica.

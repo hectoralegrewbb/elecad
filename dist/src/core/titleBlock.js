@@ -48,11 +48,12 @@ const fit = (text, maxWidth, size) => {
 };
 
 // bounds: rect del contenido del plano. Devuelve { rect, shapes } o null si está desactivado / no hay contenido.
-export function layoutTitleBlock(titleBlock, bounds) {
+export function layoutTitleBlock(titleBlock, bounds, { minValueSize } = {}) {
   if (!titleBlock?.enabled || !bounds) return null;
   const right = Math.max(bounds.right, bounds.left + width);
   const left = right - width;
   const top = bounds.bottom + 20;
+  let truncated = false;
   const shapes = [{ t: 'rect', x: left, y: top, w: width, h: titleBlockSize.height }];
   let y = top;
   rows.forEach((row, rowIndex) => {
@@ -61,12 +62,20 @@ export function layoutTitleBlock(titleBlock, bounds) {
     row.cells.forEach(([key, fraction], cellIndex) => {
       const cellWidth = width * fraction;
       if (cellIndex > 0) shapes.push({ t: 'line', x1: x, y1: y, x2: x, y2: y + row.height });
-      const valueSize = row.big && key === 'title' ? 8 : 6;
+      const defaultValueSize = row.big && key === 'title' ? 8 : 6;
+      const value = String(titleBlock[key] ?? '');
+      const valueSize = minValueSize && value.length
+        ? Math.max(minValueSize, Math.min(defaultValueSize, (cellWidth - 4) / ((value.length + 0.01) * 0.55)))
+        : defaultValueSize;
+      const fitted = fit(value, cellWidth - 4, valueSize);
+      truncated ||= fitted !== value;
       shapes.push({ t: 'text', x: x + 2, y: y + 3.5, text: labelOf[key], size: 3.6, align: 'left', muted: true });
-      shapes.push({ t: 'text', x: x + 2, y: y + row.height * 0.66, text: fit(String(titleBlock[key] ?? ''), cellWidth - 4, valueSize), size: valueSize, align: 'left' });
+      shapes.push({ t: 'text', x: x + 2, y: y + row.height * 0.66, text: fitted, size: valueSize, align: 'left' });
       x += cellWidth;
     });
     y += row.height;
   });
-  return { rect: { left, top, right, bottom: top + titleBlockSize.height }, shapes };
+  const layout = { rect: { left, top, right, bottom: top + titleBlockSize.height }, shapes };
+  if (minValueSize) layout.truncated = truncated;
+  return layout;
 }

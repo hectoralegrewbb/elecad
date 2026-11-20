@@ -30,6 +30,7 @@ import { DocumentService } from './documentService.js';
 import { Editor } from './editor.js';
 import { createEditorActions } from './editorActions.js';
 import { registerShortcuts } from './shortcuts.js';
+import { UnifilarWorkspace } from '../unifilar/workspace.js';
 
 const byId = (id) => document.getElementById(id);
 
@@ -49,17 +50,57 @@ const editor = new Editor({ store, commands, catalog, selection, viewport, route
 const renderer = new CanvasRenderer(canvas, { viewport, services });
 
 const notify = createToaster(byId('toastRoot'));
+const layout = byId('layoutWorkspace');
+const unifilar = new UnifilarWorkspace({
+  root: byId('unifilarWorkspace'),
+  onReturn: () => navigateWorkspace(false),
+  onOpen: () => documents.open(),
+});
+
+function applyWorkspace(focus = true) {
+  const active = window.location.hash === '#unifilar';
+  layout.hidden = active;
+  byId('paletteRoot').hidden = active;
+  if (active) {
+    palette.close();
+    unifilar.show({ focus });
+  } else {
+    unifilar.hide();
+    renderer.resize();
+    editor.requestRender();
+    if (focus) canvas.focus();
+  }
+}
+
+function navigateWorkspace(active) {
+  const url = new URL(window.location.href);
+  url.hash = active ? 'unifilar' : '';
+  if (url.href !== window.location.href) window.history.pushState(null, '', url);
+  applyWorkspace();
+}
 const documents = new DocumentService({
   editor,
   services,
   getViewportSize: () => ({ width: renderer.width, height: renderer.height }),
-  notify,
+  notify: (message, options) => unifilar.active ? unifilar.feedback(message, options?.kind === 'error') : notify(message, options),
+  onOpen: async ({ kind, state, handle, name }) => {
+    if (kind === 'unifilar') {
+      await unifilar.ready;
+      if (!unifilar.mayReplaceDraft(state)) return true;
+      unifilar.load(state, handle);
+      navigateWorkspace(true);
+      unifilar.feedback(`Abierto: ${name}`);
+      return true;
+    }
+    if (unifilar.active) navigateWorkspace(false);
+    return false;
+  },
 });
 const actions = createEditorActions(editor, notify);
 
 const registry = new CommandRegistry();
 const dialogs = { titleBlock: new TitleBlockDialog({ editor }) };
-registerAppCommands({ registry, editor, actions, documents, dialogs });
+registerAppCommands({ registry, editor, actions, documents, dialogs, showUnifilar: () => navigateWorkspace(true) });
 const palette = new CommandPalette({ root: byId('paletteRoot'), registry, catalog });
 let workbench;
 
@@ -91,7 +132,7 @@ controller.onCursorMove((world) => {
   statusBar.setCursor(world);
 });
 controller.attach();
-registerShortcuts({ editor, actions, documents, palette });
+registerShortcuts({ editor, actions, documents, palette, isActive: () => !unifilar.active });
 
 // El workbench solo conecta controles visuales con las acciones existentes.
 workbench = new Workbench({ topbar: byId('topbarRoot'), stage: byId('stage'), editor, actions, documents, palette, registry, canvas });
@@ -132,3 +173,5 @@ document.addEventListener('visibilitychange', () => {
 
 window.elcad = { editor, store, catalog, documents };
 restoreSession();
+window.addEventListener('popstate', () => applyWorkspace());
+if (window.location.hash === '#unifilar') applyWorkspace(false);

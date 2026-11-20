@@ -275,3 +275,98 @@ input:focus, select:focus { border-color: var(--accent); box-shadow: var(--accen
   @keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 }
 @media (max-width: 960px) { .side { border-radius: 0 var(--radius-lg) var(--radius-lg) 0; } .side-right { border-radius: var(--radius-lg) 0 0 var(--radius-lg); } }
+
+/* Editor unifilar */
+.uf-workspace {
+  display: grid;
+  grid-template: auto minmax(0, 1fr) auto / minmax(0, 1fr);
+  grid-template-areas: 'top' 'stage' 'status';
+  height: 100dvh;
+  position: relative;
+}
+.uf-toolbar {
+  grid-area: top;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .55rem 1rem;
+  padding: .55rem .75rem;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
+}
+.uf-doc { display: grid; gap: .2rem; min-width: 0; flex-basis: 100%; }
+.uf-doc .brand span { font-size: .85rem; color: var(--muted); margin-left: .35rem; }
+.uf-doc strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.uf-actions { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.uf-workspace .btn { min-height: 2.65rem; padding: .35rem .62rem; transition: background 170ms ease, border-color 170ms ease; }
+.uf-workspace .btn[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.uf-workspace .btn:active:not(:disabled) { filter: brightness(1.22); }
+.uf-stage { grid-area: stage; overflow: auto; background: #10151d; min-width: 0; min-height: 0; padding: .85rem; }
+.uf-sheet {
+  width: 100%;
+  aspect-ratio: 1.414;
+  margin-inline: auto;
+  box-shadow: 0 .4rem 1.8rem #0008;
+}
+.uf-sheet svg { display: block; width: 100%; height: 100%; color-scheme: light; user-select: none; }
+.uf-target { cursor: pointer; touch-action: none; }
+.uf-panel {
+  position: absolute;
+  z-index: 2;
+  inset: auto .6rem 5rem;
+  max-height: min(60%, 27rem);
+  display: flex;
+  flex-direction: column;
+  gap: .65rem;
+  min-height: 0;
+  min-width: 0;
+  padding: .8rem;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 .6rem 2rem #0007;
+}
+.uf-panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; }
+.uf-panel h2, .uf-panel h3 { margin: 0; font-size: 1rem; }
+.uf-symbols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: .4rem; }
+.uf-symbols .btn { text-align: left; }
+.uf-panel [data-role="fields"] { display: grid; gap: .65rem; }
+.uf-field { display: grid; gap: .3rem; min-width: 0; }
+.uf-field span { font-size: .9rem; color: var(--muted); }
+.uf-field input, .uf-field select, .uf-library input { min-height: 2.65rem; }
+.uf-status {
+  grid-area: status;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .4rem;
+  min-width: 0;
+  padding: .45rem .75rem;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+.uf-status > div:first-child { flex: 1 1 14rem; overflow-wrap: anywhere; }
+.uf-status [data-role="warnings"] { color: var(--warn); }
+.uf-status .uf-error { color: var(--danger); }
+.uf-dialog { max-height: 90dvh; width: min(94vw, 38rem); overflow: auto; }
+.uf-dialog .form-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+
+@media (min-width: 961px) {
+  .uf-workspace { grid-template-columns: minmax(0, 1fr); }
+  .uf-workspace[data-library-open="true"] { grid-template-columns: 15rem minmax(0, 1fr); grid-template-areas: 'top top' 'library stage' 'status status'; }
+  .uf-workspace[data-properties-open="true"] { grid-template-columns: minmax(0, 1fr) 17rem; grid-template-areas: 'top top' 'stage properties' 'status status'; }
+  .uf-workspace[data-library-open="true"][data-properties-open="true"] {
+    grid-template-columns: 15rem minmax(0, 1fr) 17rem;
+    grid-template-areas: 'top top top' 'library stage properties' 'status status status';
+  }
+  .uf-doc { flex: 0 1 16rem; }
+  .uf-panel { position: static; max-height: none; border-radius: 0; box-shadow: none; }
+  .uf-library { grid-area: library; }
+  .uf-inspector { grid-area: properties; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .uf-workspace .btn { transition: none; }
+}

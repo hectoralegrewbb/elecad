@@ -19,3 +19,10 @@ Workbench consume las APIs públicas de Editor, selección, acciones, documentos
 
 ### 0.6
 core/textLayout.js exporta textAngle y componentLabelLayout; consume geometría pública y lo consumen Canvas, SVG y sceneBounds. El bloqueo se aplica en comandos/selección; UI solo invoca comandos. Los exportadores de imagen y PDF reutilizan las rutas existentes.
+
+### Plano unifilar
+
+- `src/unifilar/model.js` define el documento de potencia, sus símbolos, circuitos y operaciones puras.
+- `src/unifilar/sheet.js` compone la lámina en SVG a partir del modelo y usa las APIs de cajetín y simbología existentes. Exporta geometría, rutas y diagnósticos.
+- `src/unifilar/workspace.js` monta el editor, consume el historial público de `DocumentStore` y delega archivo, impresión y autoguardado en `src/io/`.
+- `src/app/main.js` conecta ambos editores y dirige la apertura de archivos según el tipo devuelto por `readDocument`.

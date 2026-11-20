@@ -158,7 +158,7 @@ export class Workbench {
       const caption = document.createElement('div'); caption.className = 'menu-caption';
       caption.textContent = exportOnly ? 'EXPORTAR' : 'DOCUMENTO';
       this.menu.append(caption);
-      const ids = exportOnly ? ['file.exportSvg','file.exportPng','file.print','file.exportBom','file.exportWires'] : ['file.new','file.open','file.save','file.saveAs','doc.titleBlock','doc.unlock','file.demo'];
+      const ids = exportOnly ? ['file.exportSvg','file.exportPng','file.print','file.exportBom','file.exportWires'] : ['file.new','file.unifilar','file.open','file.save','file.saveAs','doc.titleBlock','doc.unlock','file.demo'];
       ids.forEach(id => {
         const command = registry.commands.find(c => c.id === id);
         if (!command) return;

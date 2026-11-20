@@ -12,12 +12,13 @@ const emptyViewRect = { left: 0, top: 0, right: 600, bottom: 400 };
 
 // Orquesta archivo / exportación / vista. No conoce el DOM salvo por los módulos de io.
 export class DocumentService {
-  constructor({ editor, services, getViewportSize, notify }) {
+  constructor({ editor, services, getViewportSize, notify, onOpen = null }) {
     this.editor = editor;
     this.services = services;
     this.getViewportSize = getViewportSize;
     this.notify = notify;
     this.fileHandle = null;
+    this.onOpen = onOpen;
   }
 
   get state() {
@@ -66,9 +67,12 @@ export class DocumentService {
 
   async open() {
     try {
-      const { state, handle, name } = await openDocument();
-      this.fileHandle = handle;
-      this.loadState(state);
+      const file = await openDocument();
+      if (this.onOpen && await this.onOpen(file)) return;
+      if (file.kind === 'unifilar') throw new Error('Abrí este documento desde el editor unifilar.');
+      this.fileHandle = file.handle;
+      this.loadState(file.state);
+      const { name } = file;
       this.notify(`Abierto: ${name}`);
     } catch (error) {
       if (error.name !== 'AbortError') this.notify(`No se pudo abrir: ${error.message}`, { kind: 'error' });

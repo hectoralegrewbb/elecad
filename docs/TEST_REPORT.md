@@ -32,3 +32,11 @@ Automatizadas: suite anterior completa y editorCorrections.test.mjs. Verifica bl
 Chromium: conmutador Sección mm², selección/bloqueo de gabinete y clic posterior sin selección; resumen con desbloqueo individual; inserción de sonda y selección vertical visible en canvas. Barra de rótulos sin desborde a 320, 768 y 1024px mediante iframe.
 
 No verificados en esta revisión: hardware táctil, Safari/Firefox, selector nativo de archivo ni impresión del sistema. Exportación SVG probada por test; PNG/PDF conservan sus pipelines compartidos. No se certifican modelos eléctricos de fabricante.
+
+## Plano unifilar
+
+- Automatizadas: suite completa, compatibilidad con ambos fixtures de gabinete, ida y vuelta `.elcad` de unifilar, importación inválida, historial, cruces y derivaciones, y dimensiones SVG de los cuatro formatos/orientaciones.
+- Chromium: colocación, conexión, inserción de una unión, arrastre, deshacer/rehacer, edición de cajetín, descarga `.elcad` y SVG, restauración del borrador y apertura desde ambos editores.
+- Impresión en Chromium: una página A4 vertical, de 594,96 × 841,92 puntos, generada a partir del documento de impresión de la app.
+- Viewports de 320, 768 y 1024 px sin desborde horizontal de la aplicación y con carga del ejemplo por toque emulado.
+- La reapertura se verificó con el selector estándar de archivos. El selector nativo de File System Access y la impresión desde dispositivos físicos quedaron fuera de esta verificación.

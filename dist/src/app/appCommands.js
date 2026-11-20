@@ -1,5 +1,5 @@
 // Registra en la paleta: componentes del catálogo (modo colocación) + comandos de archivo, edición, vista y cotas.
-export function registerAppCommands({ registry, editor, actions, documents, dialogs }) {
+export function registerAppCommands({ registry, editor, actions, documents, dialogs, showUnifilar }) {
   const hasSelection = () => editor.selection.size > 0;
   const hasComponentSelection = () => actions.selectedComponentCount() > 0;
   const atLeast = (count) => () => actions.selectedComponentCount() >= count;
@@ -14,6 +14,7 @@ export function registerAppCommands({ registry, editor, actions, documents, dial
       return next;
     }) },
     { id: 'file.new', title: 'Nuevo documento', group: 'Archivo', run: () => documents.newDocument() },
+    { id: 'file.unifilar', title: 'Plano unifilar', subtitle: 'Crear o retomar un esquema de potencia', group: 'Archivo', keywords: ['unifilar', 'lámina'], run: showUnifilar },
     { id: 'file.open', title: 'Abrir…', subtitle: 'Archivo .elcad', group: 'Archivo', shortcut: 'Ctrl+O', run: () => documents.open() },
     { id: 'file.save', title: 'Guardar', subtitle: 'Exporta el .elcad al disco', group: 'Archivo', shortcut: 'Ctrl+S', run: () => documents.save() },
     { id: 'file.saveAs', title: 'Guardar como…', group: 'Archivo', shortcut: 'Ctrl+Shift+S', run: () => documents.save({ forcePicker: true }) },
@@ -51,7 +52,7 @@ export function registerAppCommands({ registry, editor, actions, documents, dial
     { id: 'wire.togglePhase', title: 'Rótulos de cable: mostrar / ocultar función (L1, N, 24V…)', group: 'Cableado', run: () => actions.toggleDisplay('wirePhase', 'Función del cable') },
     { id: 'wire.toggleGauge', title: 'Rótulos de cable: mostrar / ocultar sección (mm²)', group: 'Cableado', keywords: ['calibre', 'seccion', 'diametro'], run: () => actions.toggleDisplay('wireGauge', 'Sección del cable') },
 
-    { id: 'view.symbols', title: 'Vista: alternar forma física / símbolo eléctrico', subtitle: 'Dibuja cada componente con su símbolo IEC (también en exportaciones)', group: 'Vista', shortcut: 'S', keywords: ['simbolo', 'iec', 'esquema', 'unifilar', 'forma'], run: () => actions.toggleViewMode() },
+    { id: 'view.symbols', title: 'Vista: alternar forma física / símbolo eléctrico', subtitle: 'Dibuja cada componente con su símbolo IEC (también en exportaciones)', group: 'Vista', shortcut: 'S', keywords: ['simbolo', 'iec', 'esquema', 'forma'], run: () => actions.toggleViewMode() },
     { id: 'view.fit', title: 'Ajustar vista al contenido', group: 'Vista', shortcut: 'F', run: () => documents.fitView() },
 
     { id: 'dim.width', title: 'Cota: ancho del componente', subtitle: 'Seleccioná 1 componente', group: 'Cotas', enabled: () => actions.selectedComponentCount() === 1, run: () => actions.addDimension('width') },

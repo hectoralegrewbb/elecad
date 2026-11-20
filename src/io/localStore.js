@@ -28,8 +28,8 @@ async function runRequest(mode, createRequest) {
   });
 }
 
-export const saveAutosave = (state) => runRequest('readwrite', (store) => store.put({ savedAt: Date.now(), state }, autosaveKey));
+export const saveAutosave = (state, key = autosaveKey) => runRequest('readwrite', (store) => store.put({ savedAt: Date.now(), state }, key));
 
-export const loadAutosave = () => runRequest('readonly', (store) => store.get(autosaveKey));
+export const loadAutosave = (key = autosaveKey) => runRequest('readonly', (store) => store.get(key));
 
 export const clearAutosave = () => runRequest('readwrite', (store) => store.delete(autosaveKey));

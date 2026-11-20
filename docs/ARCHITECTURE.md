@@ -21,3 +21,9 @@ Sin migración de stack: JavaScript ES modules y Canvas2D. Las dimensiones de pa
 
 ### 0.6
 Nuevos campos opcionales de componente: labelOrientation, terminalOrientation, bodyTextOrientation y locked. Orientaciones horizontal/vertical; locked booleano. Validación en updateComponent y migrateState. Se conservan firmas existentes, esquema v1 y IDs del catálogo. El cuerpo de texto sin orientación explícita conserva su comportamiento previo de rotación; elegir orientación la independiza de la pieza.
+
+### Plano unifilar
+
+Documento de potencia con símbolos, puertos, puntos de unión explícitos y circuitos ortogonales en milímetros. La intersección gráfica no modifica las referencias eléctricas. El editor monta un historial propio y usa el mismo SVG para la lámina en pantalla, la descarga y la impresión. La hoja se compone con tamaños físicos A4/A3. La navegación por `#unifilar` recupera el borrador de ese editor.
+
+El archivo `.elcad` de unifilar usa la cabecera versionada `elcad-unifilar`. La aplicación identifica esa cabecera al abrir y valida componentes, límites y referencias; el lector del formato histórico de gabinetes se mantiene. Un navegador guarda un borrador por editor en la misma base IndexedDB. Cada editor administra su propio destino de guardado.

@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app">
+  <div class="app" id="layoutWorkspace">
     <header id="topbarRoot" aria-label="Barra superior"></header>
     <aside id="library" class="side side-left" aria-label="Biblioteca de componentes"></aside>
     <main id="stage" class="stage">
@@ -26,6 +26,7 @@
     <aside id="properties" class="side side-right" aria-label="Propiedades"></aside>
     <div id="statusBar" class="status-bar" role="status" aria-label="Estado del editor"></div>
   </div>
+  <div id="unifilarWorkspace" class="uf-workspace" hidden></div>
   <div id="paletteRoot"></div>
   <div id="toastRoot" class="toast-root" role="status" aria-live="polite"></div>
   <script type="module" src="src/app/main.js"></script>

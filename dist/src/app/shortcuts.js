@@ -1,8 +1,8 @@
 const typingTags = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
 
-export function registerShortcuts({ editor, actions, documents, palette }) {
+export function registerShortcuts({ editor, actions, documents, palette, isActive = () => true }) {
   const clipboardAllowed = (event) =>
-    !palette.isOpen && !typingTags.has(event.target?.tagName) && !event.target?.isContentEditable;
+    isActive() && !palette.isOpen && !typingTags.has(event.target?.tagName) && !event.target?.isContentEditable;
 
   // Copiar / cortar / pegar con los eventos nativos: portapapeles del sistema sin pedir permisos.
   window.addEventListener('copy', (event) => {
@@ -28,6 +28,7 @@ export function registerShortcuts({ editor, actions, documents, palette }) {
   });
 
   window.addEventListener('keydown', (event) => {
+    if (!isActive()) return;
     const modifier = event.ctrlKey || event.metaKey;
     const key = event.key.toLowerCase();
 

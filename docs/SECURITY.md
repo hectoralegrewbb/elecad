@@ -13,3 +13,7 @@ Visibilidad de paneles, gesto y panel de documento abierto viven solo en RAM den
 
 ### Datos 0.6
 Orientaciones y locked se guardan en RAM, autoguardado IndexedDB y archivos .elcad exportados. Los leen renderer/exportadores y comandos/selección respectivamente. Persisten con el documento; se revierten desde propiedades o desbloqueo y se eliminan al eliminar ese componente tras desbloquearlo. Las opciones de rótulos siguen en meta.display. No se agrega envío de datos, autenticación ni servidor.
+
+### Documentos unifilares
+
+El archivo `.elcad` y el borrador local de IndexedDB contienen los símbolos, referencias, circuitos, lámina y datos del cajetín. El editor y sus exportadores leen esos datos en el navegador. Los archivos conservados por el usuario se eliminan desde su sistema de archivos. El borrador se reemplaza al guardar cambios en el editor o se elimina al limpiar los datos del sitio. La importación comprueba la versión, la cantidad de objetos y la existencia de puertos, valida las coordenadas y limita el texto. SVG e impresión escapan el texto de usuario.
