@@ -6,8 +6,8 @@ import { downloadBlob, saveDocument } from '../io/fileAccess.js';
 import { loadAutosave, saveAutosave } from '../io/localStore.js';
 import { printSvg } from '../io/printService.js';
 import { createUnifilarDemo } from './demo.js';
-import { addCircuit, addElement, conductorSets, createUnifilar, getSymbol, removeSelection,
-  sameEnd, snap, symbols, portsFor, updateCircuit, updateElement, updateSheet, validateUnifilar } from './model.js';
+import { addCircuit, addElement, busLimits, busSpan, conductorSets, createUnifilar, getSymbol, noteLimits, removeSelection,
+  sameEnd, snap, symbols, portsFor, updateBusBranch, updateCircuit, updateElement, updateSheet, validateUnifilar } from './model.js';
 import { circuitPoints, isInside, orthogonalPoints, sheetGeometry, sheetMarkup, sheetWarnings } from './sheet.js';
 
 const draftKey = 'unifilar';
@@ -15,20 +15,27 @@ const gridSize = 5;
 const closest = (event, selector) => event.target.closest(selector);
 const button = (label, action, extra = '') => `<button type="button" class="btn" data-action="${action}" ${extra}>${label}</button>`;
 
-function makeField(label, name, value, { choices, type = 'text', limit = 80 } = {}) {
+function makeField(label, name, value, { choices, type = 'text', limit = 80, min, max, step = 'any' } = {}) {
   const field = document.createElement('label');
   field.className = 'uf-field';
   const caption = document.createElement('span');
   caption.textContent = label;
-  const input = document.createElement(choices ? 'select' : 'input');
+  const input = document.createElement(choices ? 'select' : type === 'textarea' ? 'textarea' : 'input');
   input.name = name;
   input.setAttribute('aria-label', label);
   if (choices) {
     for (const [key, text] of choices) input.add(new Option(text, key));
+  } else if (type === 'textarea') {
+    input.rows = 5;
+    input.maxLength = limit;
   } else {
     input.type = type;
     input.maxLength = limit;
-    if (type === 'number') input.step = 'any';
+    if (type === 'number') {
+      input.step = step;
+      if (min !== undefined) input.min = min;
+      if (max !== undefined) input.max = max;
+    }
   }
   input.value = value ?? '';
   field.append(caption, input);
@@ -229,12 +236,30 @@ export class UnifilarWorkspace {
       const element = this.state.elements[selected.id];
       const heading = document.createElement('h3');
       heading.textContent = getSymbol(element.kind).name;
-      contents.push(heading,
-        makeField('Identificación', 'tag', element.tag, { limit: 18 }),
-        makeField('Datos del equipo', 'detail', element.detail, { limit: 28 }),
+      contents.push(heading);
+      if (element.kind === 'note') {
+        contents.push(makeField('Texto de la nota', 'text', element.text, { type: 'textarea', limit: noteLimits.characters }),
+          makeField('Presentación', 'noteStyle', element.noteStyle, { choices: [['plain', 'Texto'], ['box', 'Recuadro']] }));
+      } else {
+        contents.push(makeField('Identificación', 'tag', element.tag, { limit: 18 }),
+          makeField('Datos del equipo', 'detail', element.detail, { limit: 28 }));
+      }
+      contents.push(
         makeField('Posición X (mm)', 'x', element.x, { type: 'number' }),
         makeField('Posición Y (mm)', 'y', element.y, { type: 'number' }));
-      contents.push(this.actionButton('Girar 90°', 'rotate'));
+      if (element.kind !== 'note') contents.push(this.actionButton('Girar 90°', 'rotate'));
+      if (element.kind === 'bus') {
+        const span = busSpan(element);
+        const offset = { type: 'number', min: -span / 2, max: span / 2, step: gridSize };
+        contents.push(makeField('Longitud de barra (mm)', 'span', span, { type: 'number', ...busLimits }));
+        const hint = document.createElement('p');
+        hint.textContent = 'Posiciones desde el centro en pasos de 5 mm. Las cinco tomas iniciales se conservan. Vaciá una toma adicional sin conectar para quitarla.';
+        contents.push(hint);
+        for (const [port, distance] of Object.entries(element.branches ?? {}).sort(([a], [b]) => Number(a.slice(6)) - Number(b.slice(6)))) {
+          contents.push(makeField(`Derivación adicional ${port.slice(6)} (mm)`, port, distance, offset));
+        }
+        contents.push(makeField('Agregar derivación (mm)', 'newBranch', '', offset));
+      }
     } else if (selected?.type === 'circuit') {
       const circuit = this.state.circuits[selected.id];
       contents.push(makeField('Circuito', 'label', circuit.label, { limit: 18 }),
@@ -464,6 +489,7 @@ export class UnifilarWorkspace {
   rotate() {
     if (this.selection?.type !== 'element') return;
     const { id } = this.selection;
+    if (this.state.elements[id].kind === 'note') return;
     this.store.apply((state) => updateElement(state, id, { rotation: (state.elements[id].rotation + 90) % 360 }));
   }
 
@@ -478,8 +504,40 @@ export class UnifilarWorkspace {
   changeField(target) {
     const { name, value } = target;
     const selected = this.selection;
-    if (target.validity.badInput) return this.feedback('Ingresá un valor numérico válido.', true);
+    if (target.validity.badInput || target.validity.rangeOverflow || target.validity.rangeUnderflow || target.validity.stepMismatch) {
+      return this.feedback('Ingresá un número dentro del rango y del paso indicados.', true);
+    }
     if (selected?.type === 'element') {
+      const element = this.state.elements[selected.id];
+      if (element.kind === 'bus' && (name === 'newBranch' || name.startsWith('branch'))) {
+        if (name === 'newBranch' && value === '') return;
+        const next = updateBusBranch(this.state, selected.id, name === 'newBranch' ? null : name, value === '' ? null : Number(value));
+        if (next === this.state) {
+          if (element.branches?.[name] !== Number(value) || value === '') {
+            this.feedback(value === '' ? 'Desconectá el tramo antes de quitar la derivación.' : 'Posición ocupada o límite de derivaciones alcanzado. Elegí otra posición.', true);
+          }
+          target.value = element.branches?.[name] ?? '';
+          return;
+        }
+        this.store.apply(() => next);
+        this.renderInspector();
+        const focus = name === 'newBranch' || value === '' ? 'newBranch' : name;
+        this.inspector.querySelector(`[name="${focus}"]`)?.focus();
+        this.feedback('Derivaciones actualizadas. Usá Conectar para seleccionar las tomas.');
+        return;
+      }
+      if (element.kind === 'bus' && name === 'span') {
+        if (value === '' || Object.values(element.branches ?? {}).some((offset) => Math.abs(offset) > Number(value) / 2)) {
+          this.feedback('Elegí una longitud que incluya todas las derivaciones actuales.', true);
+          target.value = busSpan(element);
+          return;
+        }
+        this.store.apply((state) => updateElement(state, selected.id, { span: Number(value) }));
+        this.renderInspector();
+        this.inspector.querySelector('[name="span"]')?.focus();
+        this.feedback();
+        return;
+      }
       if ((name === 'x' || name === 'y') && (value === '' || Math.abs(Number(value)) > 2000)) {
         this.feedback('Ingresá una coordenada entre −2000 y 2000 mm.', true);
         return;
@@ -554,11 +612,12 @@ export class UnifilarWorkspace {
     const point = { x: snap(drag.point.x), y: snap(drag.point.y) };
     if (this.tool === 'place') {
       const { area } = sheetGeometry(this.state.meta);
-      if (!isInside(point, area)) return this.feedback('Colocá el símbolo dentro del área útil de la lámina.', true);
+      if (!isInside(point, area)) return this.feedback('Colocá el elemento dentro del área útil de la lámina.', true);
       const id = createId('sym');
       this.store.apply((state) => addElement(state, this.kind, point, id));
-      if (!this.state.elements[id]) return this.feedback('La lámina alcanzó el límite de símbolos.', true);
+      if (!this.state.elements[id]) return this.feedback('La lámina alcanzó el límite de elementos.', true);
       this.resetTool();
+      if (this.kind === 'note') this.setPanel('properties', true);
       this.select({ type: 'element', id });
     } else if (this.tool === 'connect') this.connectAt(drag, point);
     else if (drag.elementId) this.select({ type: 'element', id: drag.elementId });

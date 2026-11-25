@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { DocumentStore } from '../src/core/documentStore.js';
 import { parseDocument, readDocument, serializeDocument } from '../src/io/elcadFormat.js';
 import { createUnifilarDemo } from '../src/unifilar/demo.js';
-import { addCircuit, addElement, createUnifilar, portsFor, removeSelection, updateElement, updateSheet } from '../src/unifilar/model.js';
+import { addCircuit, addElement, busSpan, createUnifilar, portsFor, removeSelection, updateBusBranch, updateElement,
+  updateSheet, validateUnifilar } from '../src/unifilar/model.js';
 import { circuitPoints, sheetGeometry, sheetMarkup, sheetWarnings } from '../src/unifilar/sheet.js';
 
 const demo = createUnifilarDemo();
@@ -80,4 +81,44 @@ for (const [paper, orientation, width, height] of [
   if (paper === 'A4') assert(sheetWarnings(state).length > 0);
 }
 
-console.log('OK — unifilar: modelo, conexiones explícitas, historial, lámina, SVG y compatibilidad de archivos.');
+let expanded = addElement(createUnifilar(), 'bus', { x: 200, y: 95 }, 'bus');
+assert.equal(busSpan(expanded.elements.bus), 50);
+const legacyPorts = portsFor(expanded.elements.bus);
+expanded = updateElement(expanded, 'bus', { span: 280 });
+for (const [index, offset] of [-125, -95, -55, 55, 95, 125].entries()) {
+  expanded = updateBusBranch(expanded, 'bus', null, offset);
+  const motor = 'motor' + index;
+  expanded = addElement(expanded, 'motor', { x: 200 + offset, y: 150 }, motor);
+  expanded = addCircuit(expanded, end('bus', 'branch' + (index + 1)), end(motor, 'in'), [], {}, 'run' + index);
+}
+assert.deepEqual(portsFor(expanded.elements.bus).slice(0, 5), legacyPorts);
+assert.equal(portsFor(expanded.elements.bus).length, 11);
+assert.equal(Object.keys(expanded.circuits).length, 6);
+assert.equal(updateBusBranch(expanded, 'bus', null, 0), expanded);
+assert.equal(updateBusBranch(expanded, 'bus', null, 145), expanded);
+assert.equal(updateBusBranch(expanded, 'bus', 'branch1', null), expanded);
+assert.equal(updateElement(expanded, 'bus', { span: 80 }), expanded);
+const moved = updateBusBranch(expanded, 'bus', 'branch1', -130);
+assert.equal(circuitPoints(moved, moved.circuits.run0)[0].x, 70);
+assert.deepEqual(portsFor(updateElement(moved, 'bus', { rotation: 90 }).elements.bus).find(({ port }) => port === 'branch1'),
+  { elementId: 'bus', port: 'branch1', x: 200, y: -35 });
+const disconnected = removeSelection(moved, { type: 'circuit', id: 'run0' });
+assert(!Object.hasOwn(updateBusBranch(disconnected, 'bus', 'branch1', null).elements.bus.branches, 'branch1'));
+
+expanded = addElement(expanded, 'note', { x: 40, y: 180 }, 'note');
+expanded = updateElement(expanded, 'note', { text: 'Dato <pendiente>\r\nProtección por verificar', noteStyle: 'box' });
+assert.deepEqual(portsFor(expanded.elements.note), []);
+assert.equal(addCircuit(expanded, end('note', 'in'), end('bus', 'tap2')), expanded);
+assert.deepEqual(sheetWarnings(expanded), []);
+const expandedSvg = sheetMarkup(expanded);
+assert.match(expandedSvg, /M-140 0H140/);
+assert.match(expandedSvg, /Dato &lt;pendiente&gt;/);
+assert.match(expandedSvg, /Protección por verificar/);
+assert.match(sheetMarkup(expanded, { interactive: true, connecting: true }), /data-port="branch6"/);
+assert(sheetWarnings(updateElement(expanded, 'note', { x: 380 })).length > 0);
+assert.deepEqual((await readDocument(await serializeDocument(expanded, { kind: 'unifilar' }))).state, expanded);
+assert.throws(() => validateUnifilar({
+  ...expanded, elements: { ...expanded.elements, bus: { ...expanded.elements.bus, branches: { branch1: 0 } } },
+}), /posición de derivación inválida/);
+
+console.log('OK — unifilar: conexiones, historial, barras extensibles, notas, SVG y compatibilidad de archivos.');

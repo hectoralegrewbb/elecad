@@ -17,9 +17,13 @@ export const symbols = Object.freeze({
   earth: { name: 'Tierra de protección', prefix: 'PE', ports: ['in'], path: 'M0 -10V0M-5 0H5M-3 2H3M-1 4H1' },
   bus: { name: 'Barra', prefix: 'B', ports: ['tap1', 'tap2', 'tap3', 'tap4', 'tap5'], path: 'M-25 0H25' },
   junction: { name: 'Punto de unión', prefix: 'X', ports: ['join'], path: '' },
+  note: { name: 'Nota de lámina', prefix: '', ports: [] },
 });
 
 const tapOffsets = [-20, -10, 0, 10, 20];
+const branchId = /^branch(?:[1-9]|[12][0-9]|3[0-2])$/;
+export const busLimits = Object.freeze({ min: 50, max: 380, step: 10, branches: 32 });
+export const noteLimits = Object.freeze({ lines: 12, columns: 100, characters: 1211 });
 const idPattern = /^[a-z][a-z0-9_]{0,59}$/;
 const positionLimit = 2000;
 const validId = (value) => typeof value === 'string' && idPattern.test(value);
@@ -42,9 +46,10 @@ export function getSymbol(kind) {
 }
 
 export function portsFor(element) {
-  return getSymbol(element.kind).ports.map((id, index) => {
+  const offsets = portOffsets(element);
+  return Object.entries(offsets).map(([id, distance]) => {
     const offset = id === 'in' ? { x: 0, y: -10 } : id === 'out' ? { x: 0, y: 10 }
-      : { x: element.kind === 'bus' ? tapOffsets[index] : 0, y: 0 };
+      : { x: distance, y: 0 };
     const rotated = element.rotation === 90 ? { x: -offset.y, y: offset.x }
       : element.rotation === 180 ? { x: -offset.x, y: -offset.y }
       : element.rotation === 270 ? { x: offset.y, y: -offset.x } : offset;
@@ -52,12 +57,38 @@ export function portsFor(element) {
   });
 }
 
+function portOffsets(element) {
+  const names = getSymbol(element.kind).ports;
+  const offsets = Object.fromEntries(names.map((name, index) => [name, element.kind === 'bus' ? tapOffsets[index] : 0]));
+  return element.kind === 'bus' ? { ...offsets, ...element.branches } : offsets;
+}
+
+export const busSpan = (element) => element.span ?? busLimits.min;
+
+function validSpan(value) {
+  return Number.isInteger(value) && value >= busLimits.min && value <= busLimits.max && value % busLimits.step === 0;
+}
+
+function validBranchOffset(offset, span, reserved) {
+  return Number.isInteger(offset) && offset === snap(offset) && Math.abs(offset) <= span / 2 && !reserved.includes(offset);
+}
+
+function noteFields(raw) {
+  return {
+    text: typeof raw.text === 'string'
+      ? raw.text.replace(/\r\n?/g, '\n').replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, ' ')
+        .split('\n', noteLimits.lines).map((line) => line.trimEnd().slice(0, noteLimits.columns)).join('\n').trim()
+      : '',
+    noteStyle: raw.noteStyle === 'box' ? 'box' : 'plain',
+  };
+}
+
 const endpoint = ({ elementId, port }) => ({ elementId, port });
 export const sameEnd = (a, b) => a.elementId === b.elementId && a.port === b.port;
 
 function validEnd(elements, end) {
   return validId(end?.elementId) && Object.hasOwn(elements, end.elementId) &&
-    getSymbol(elements[end.elementId].kind).ports.includes(end.port);
+    typeof end.port === 'string' && Object.hasOwn(portOffsets(elements[end.elementId]), end.port);
 }
 
 export function addElement(state, kind, point, id = createId('sym')) {
@@ -69,6 +100,7 @@ export function addElement(state, kind, point, id = createId('sym')) {
   while (tags.has(symbol.prefix + nextNumber)) nextNumber += 1;
   const element = { id, kind, x: snap(point.x), y: snap(point.y), rotation: 0,
     tag: kind === 'junction' ? '' : symbol.prefix + nextNumber, detail: '' };
+  if (kind === 'note') Object.assign(element, { tag: '', ...noteFields({ text: 'Nueva nota' }) });
   return { ...state, elements: { ...state.elements, [id]: element } };
 }
 
@@ -80,8 +112,40 @@ export function updateElement(state, id, patch) {
   if ([0, 90, 180, 270].includes(patch.rotation)) next.rotation = patch.rotation;
   if (typeof patch.tag === 'string') next.tag = string(patch.tag, 18);
   if (typeof patch.detail === 'string') next.detail = string(patch.detail, 28);
+  if (current.kind === 'note') Object.assign(next, noteFields({ ...current, ...patch }));
+  if (current.kind === 'bus' && validSpan(patch.span) &&
+      Object.values(current.branches ?? {}).every((offset) => Math.abs(offset) <= patch.span / 2)) {
+    next.span = patch.span;
+  }
   if (Object.keys(next).every((key) => next[key] === current[key])) return state;
   return { ...state, elements: { ...state.elements, [id]: next } };
+}
+
+export function updateBusBranch(state, id, port, offset) {
+  const element = state.elements[id];
+  if (element?.kind !== 'bus') return state;
+  const branches = { ...element.branches };
+  if (port === null) {
+    if (offset === null) return state;
+    for (let index = 1; index <= busLimits.branches; index += 1) {
+      const name = 'branch' + index;
+      if (!Object.hasOwn(branches, name)) {
+        port = name;
+        break;
+      }
+    }
+  } else if (!Object.hasOwn(branches, port)) return state;
+  if (port === null || branches[port] === offset) return state;
+  delete branches[port];
+  if (offset === null) {
+    const inUse = Object.values(state.circuits).some(({ from, to }) =>
+      [from, to].some((end) => end.elementId === id && end.port === port));
+    if (inUse) return state;
+  } else {
+    if (!validBranchOffset(offset, busSpan(element), [...tapOffsets, ...Object.values(branches)])) return state;
+    branches[port] = offset;
+  }
+  return { ...state, elements: { ...state.elements, [id]: { ...element, branches } } };
 }
 
 function circuitFields(raw) {
@@ -159,8 +223,26 @@ export function validateUnifilar(raw) {
   for (const [id, element] of entries) {
     if (!validId(id) || element?.id !== id || !getSymbol(element.kind) || !validPoint(element) ||
         ![0, 90, 180, 270].includes(element.rotation)) throw new Error('El archivo contiene un símbolo inválido.');
-    state.elements[id] = { id, kind: element.kind, x: snap(element.x), y: snap(element.y), rotation: element.rotation,
+    const parsed = { id, kind: element.kind, x: snap(element.x), y: snap(element.y), rotation: element.rotation,
       tag: string(element.tag, 18), detail: string(element.detail, 28) };
+    if (element.kind === 'note') Object.assign(parsed, noteFields(element));
+    if (element.kind === 'bus') {
+      if (Object.hasOwn(element, 'span')) {
+        if (!validSpan(element.span)) throw new Error('El archivo contiene una longitud de barra inválida.');
+        parsed.span = element.span;
+      }
+      if (Object.hasOwn(element, 'branches')) {
+        if (!record(element.branches)) throw new Error('El archivo contiene derivaciones inválidas.');
+        parsed.branches = {};
+        for (const [port, offset] of Object.entries(element.branches)) {
+          if (!branchId.test(port) || !validBranchOffset(offset, busSpan(parsed), [...tapOffsets, ...Object.values(parsed.branches)])) {
+            throw new Error('El archivo contiene una posición de derivación inválida.');
+          }
+          parsed.branches[port] = offset;
+        }
+      }
+    }
+    state.elements[id] = parsed;
   }
   let next = state;
   for (const [id, circuit] of circuits) {

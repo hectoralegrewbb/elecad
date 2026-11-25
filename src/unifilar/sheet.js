@@ -1,6 +1,6 @@
 import { layoutTitleBlock, titleBlockSize } from '../core/titleBlock.js';
 import { symbolShapesFor } from '../data/symbolLibrary.js';
-import { getSymbol, papers, portsFor, sameEnd } from './model.js';
+import { busSpan, getSymbol, papers, portsFor, sameEnd } from './model.js';
 
 const margin = 10;
 const escapeXml = (value) => String(value).replace(/[<>&"']/g, (char) => ({
@@ -45,13 +45,37 @@ export function isInside(point, { left, right, top, bottom }, inset = 0) {
 
 function elementBounds(element) {
   const { x, y, kind, rotation, tag, detail } = element;
+  if (kind === 'note') {
+    const { left, top, right, bottom } = noteGeometry(element).bounds;
+    return [{ x: left, y: top }, { x: right, y: bottom }];
+  }
   const horizontal = rotation % 180 === 0;
-  const radiusX = kind === 'bus' ? (horizontal ? 25 : 1) : horizontal ? 6 : 10;
-  const radiusY = kind === 'bus' ? (horizontal ? 1 : 25) : horizontal ? 10 : 6;
-  const labelX = x + (kind === 'bus' && horizontal ? 28 : 12);
+  const halfSpan = kind === 'bus' ? busSpan(element) / 2 : 0;
+  const radiusX = kind === 'bus' ? (horizontal ? halfSpan : 1) : horizontal ? 6 : 10;
+  const radiusY = kind === 'bus' ? (horizontal ? 1 : halfSpan) : horizontal ? 10 : 6;
+  const label = symbolLabelPosition(element);
   const labelWidth = Math.max(tag.length, detail.length) * 2;
-  return [{ x: x - radiusX, y: y - radiusY },
-    { x: Math.max(x + radiusX, labelWidth ? labelX + labelWidth : x), y: y + Math.max(radiusY, detail ? 4 : 0) }];
+  return [{ x: x - radiusX, y: Math.min(y - radiusY, labelWidth ? label.y - 4 : y) },
+    { x: Math.max(x + radiusX, labelWidth ? label.x + labelWidth : x), y: Math.max(y + radiusY, detail ? label.y + 4 : y) }];
+}
+
+function symbolLabelPosition(element) {
+  const { x, y, kind, rotation } = element;
+  if (kind !== 'bus' || rotation % 180 !== 0) return { x: x + 12, y };
+  const span = busSpan(element);
+  return span === 50 ? { x: x + 28, y } : { x: x - span / 2, y: y - 8 };
+}
+
+function noteGeometry({ x, y, text, noteStyle }) {
+  const lines = (text || '').split('\n');
+  const padding = noteStyle === 'box' ? 3 : 0;
+  const longest = Math.max(...lines.map((line) => Array.from(line).length), 1);
+  return { lines, bounds: {
+    left: x - padding,
+    top: y - padding - 3.4,
+    right: x + padding + longest * 2.05,
+    bottom: y + padding + 1.1 + (lines.length - 1) * 5,
+  } };
 }
 
 function circuitLabel(circuit, points) {
@@ -138,17 +162,32 @@ const baseShapes = Object.fromEntries(['breaker', 'disconnector', 'fuse'].map((k
 
 const junctionDot = (x, y) => `<circle cx="${x}" cy="${y}" r="0.9" fill="currentColor" stroke="none"/>`;
 
+function noteMarkup(element, active, interactive) {
+  if (!element.text && !interactive) return '';
+  const { id, x, y, noteStyle } = element;
+  const { lines, bounds } = noteGeometry(element.text ? element : { ...element, text: 'Nota vacía' });
+  const stroke = active ? '#0768c3' : '#111827';
+  const border = noteStyle === 'box' ? rect(bounds, 'fill="white"') : '';
+  return `<g ${interactive ? `data-element="${id}" class="uf-target"` : ''} stroke="${stroke}">` +
+    border + (interactive ? rect(bounds, 'fill="transparent" stroke="none"') : '') +
+    lines.map((line, index) => `<text x="${x}" y="${y + index * 5}" font-family="monospace" font-size="3.2" fill="${stroke}" stroke="none" xml:space="preserve">${escapeXml(line)}</text>`).join('') +
+    '</g>';
+}
+
 function symbolMarkup(element, active, interactive) {
   const { id, kind, x, y, rotation, tag, detail } = element;
+  if (kind === 'note') return noteMarkup(element, active, interactive);
   const definition = getSymbol(kind);
   const stroke = active ? '#0768c3' : '#111827';
+  const halfSpan = kind === 'bus' ? busSpan(element) / 2 : 0;
+  const path = kind === 'bus' ? `M${-halfSpan} 0H${halfSpan}` : definition.path;
   const body = baseShapes[kind] ? `<g transform="scale(.3333333333) translate(-30 -30)" stroke-width="1.3">${baseShapes[kind]}</g>`
-    : kind === 'junction' ? junctionDot(0, 0) : `<path d="${definition.path}" stroke-width="${kind === 'bus' ? 1.05 : 0.45}"/>`;
-  const labelX = x + (kind === 'bus' && rotation % 180 === 0 ? 28 : 12);
-  const busGap = kind === 'bus' ? `<path d="${definition.path}" stroke="white" stroke-width="2.2"/>` : '';
-  const bodyHit = interactive ? `<rect x="${kind === 'bus' ? -26 : -8}" y="${kind === 'bus' ? -4 : -10}" width="${kind === 'bus' ? 52 : 16}" height="${kind === 'bus' ? 8 : 20}" fill="transparent" stroke="none"/>` : '';
+    : kind === 'junction' ? junctionDot(0, 0) : `<path d="${path}" stroke-width="${kind === 'bus' ? 1.05 : 0.45}"/>`;
+  const label = symbolLabelPosition(element);
+  const busGap = kind === 'bus' ? `<path d="${path}" stroke="white" stroke-width="2.2"/>` : '';
+  const bodyHit = interactive ? `<rect x="${kind === 'bus' ? -halfSpan - 1 : -8}" y="${kind === 'bus' ? -4 : -10}" width="${kind === 'bus' ? halfSpan * 2 + 2 : 16}" height="${kind === 'bus' ? 8 : 20}" fill="transparent" stroke="none"/>` : '';
   const textLine = (value, offset, size, extra = '') => value
-    ? `<text x="${labelX}" y="${y + offset}" font-size="${size}" fill="${stroke}" stroke="none" ${extra}>${escapeXml(value)}</text>` : '';
+    ? `<text x="${label.x}" y="${label.y + offset}" font-size="${size}" fill="${stroke}" stroke="none" ${extra}>${escapeXml(value)}</text>` : '';
   return `<g ${interactive ? `data-element="${id}" class="uf-target"` : ''} style="color:${stroke}" stroke="${stroke}"><g transform="translate(${x} ${y}) rotate(${rotation})">${bodyHit}${busGap}${body}</g>` +
     (definition.mark ? `<text x="${x}" y="${y + 1.4}" text-anchor="middle" font-size="4" fill="${stroke}" stroke="none">${definition.mark}</text>` : '') +
     textLine(tag, -0.7, 3.4, 'font-weight="600"') + textLine(detail, 3.1, 2.8) + '</g>';
